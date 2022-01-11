@@ -2,6 +2,15 @@
 #include "FanClass.h"
 
 
+#include "PCF8583.h"
+// declare an instance of the library for IC at address 0xA0
+// (A0 pin connected to ground)
+#define sda  21
+#define scl  22
+
+PCF8583 counter(0xA0, sda, scl);
+unsigned long CounterTime     = 0;   // 
+
 #define CLK 25
 #define DT  26
 #define SW  27
@@ -12,10 +21,10 @@ Encoder enc1(CLK, DT, SW);  // encoder + button
 #include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
 
 // Initialize the OLED display using Wire library
-SSD1306  display(0x3c, 21, 22);
+SSD1306  display(0x3c, sda, scl);
 
 unsigned long CurrentTime     = 0;   // опрос
-unsigned long LCDTimeout   = 500;   // опрос
+unsigned long LCDTimeout   = 1000;   // опрос
 WordStruct LCDoutput;
 
 void IRAM_ATTR isrENC() {
@@ -110,15 +119,26 @@ void setup() {
   attachInterrupt(SW,  isrENC, CHANGE);
   enc1.setType(TYPE2);
 
-  CurrentTime = millis();
   HomeKit();
+
+
+  // configure PCF8586 to event counter mode and reset counts
+  counter.setMode(MODE_EVENT_COUNTER);
+  counter.setCount(0);
+  CurrentTime = millis();
   Serial.println("Setup complete");  
 }
 
 void loop() {
+  uint32_t rotSpeed;
   homeSpan.poll();
   if ( (millis() - CurrentTime) > LCDTimeout ) {
+    rotSpeed = 30000*counter.getCount()/(millis() - CurrentTime);
+    counter.setCount(0);
     CurrentTime = millis();
+    Serial.println(rotSpeed);
+    LCDoutput.Speed = String(rotSpeed);
+
     display.clear();
     drawStatus();
     display.display();

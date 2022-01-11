@@ -28,7 +28,7 @@ void NVS_init(){
     CurrentFanState     = new Characteristic::CurrentFanState(sIDLE);
     TargetFanState      = new Characteristic::TargetFanState(tAUTO);
 
-    this->pwmPin        = new LedPin(SpeedPin,50,25000);
+    this->pwmPin        = new LedPin(SpeedPin, 68, 25000);
 
     RotationSpeed->setRange(1000,5300,100); //sets the range to be from a min of 1000 to a max of 5300, in steps of 1000
                                             //speed = 108 * duty - 5300

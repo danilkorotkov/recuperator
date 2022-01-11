@@ -20,7 +20,7 @@
 #define tMANUAL              0
 #define tAUTO                1
 
-#define SpeedPin             23
+#define SpeedPin             13
 
 struct RECUP;
 
