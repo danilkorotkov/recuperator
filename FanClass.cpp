@@ -2,39 +2,28 @@
 #include <nvs_flash.h>
 #include "FanClass.h"
 
-static nvs_handle fanNVS;
-size_t nvslen;
+float curPWM=68;
 
 struct FanStruct FanState;
 
-void NVS_init(){
-  LOG1("FAN storage\n");
-  nvs_open("FAN",NVS_READWRITE,&fanNVS);
-      
-  if(!nvs_get_blob(fanNVS,"FANDATA",NULL,&nvslen)) {                       // if found  data in NVS
-    nvs_get_blob(fanNVS,"FANDATA",&FanState,&nvslen); }              // retrieve data  
-}
-
-
 ////////////////////////////
    
-  RECUP::RECUP() : Service::Fan(){
+RECUP::RECUP() : Service::Fan(){
 
     LOG1("Constructing Fan…\n");
-    Active              = new Characteristic::Active(OFF);
-    RotationDirection   = new Characteristic::RotationDirection(OUTTAKE);
-    RotationSpeed       = new Characteristic::RotationSpeed(0);
+    Active              = new Characteristic::Active(OFF, true);
+    RotationDirection   = new Characteristic::RotationDirection(OUTTAKE, true);
+    RotationSpeed       = new Characteristic::RotationSpeed(1000, true);
     Name                = new Characteristic::Name("recuperator");
-    CurrentFanState     = new Characteristic::CurrentFanState(sIDLE);
-    TargetFanState      = new Characteristic::TargetFanState(tAUTO);
+    CurrentFanState     = new Characteristic::CurrentFanState(sIDLE, true);
+    TargetFanState      = new Characteristic::TargetFanState(tAUTO, true);
 
-    this->pwmPin        = new LedPin(SpeedPin, 68, 25000);
+    this->pwmPin        = new LedPin(SpeedPin, 50, 25000);
 
-    RotationSpeed->setRange(1000,5300,100); //sets the range to be from a min of 1000 to a max of 5300, in steps of 1000
-                                            //speed = 108 * duty - 5300
-                                            //duty  = (speed + 5300) / 108
-    NVS_init();
-    
+    RotationSpeed->setRange(MIN_SPEED,MAX_SPEED,STEP_SPEED); //sets the range to be from a min of 1000 to a max of 5300, in steps of 1000
+                                                              //speed = 108 * duty - 5300
+                                                              //duty  = (speed + 5300) / 108
+   
 /*                         
     pinMode(this->OpenPin,OUTPUT); 
     digitalWrite(this->OpenPin,LOW);
@@ -55,14 +44,29 @@ void NVS_init(){
     attachInterruptArg(this->OpSensorPin.PIN, isr, &(this->OpSensorPin), CHANGE);
     attachInterruptArg(this->ObSensorPin.PIN, isr, &(this->ObSensorPin), CHANGE);         
 */    
+    if (Active->getVal() == ON){
+      setSpeed();
+    }
     LOG1("Constructing successful!\n");
-  } // end constructor
+} // end constructor
 
-  void RECUP::PollCurrentState(){
+void RECUP::PollCurrentState(){
     
+}
+
+boolean RECUP::update(){            
+  LOG1("Updating fan state ...\n");
+  if (Active->updated()){
+    Active->setVal(Active->getNewVal());
+    setFanState(); 
   }
 
-  boolean RECUP::update(){            
+  
+  
+  if (RotationSpeed->updated()){
+    RotationSpeed->setVal(RotationSpeed->getNewVal());
+    setSpeed();
+  }
 
     if(TargetFanState->getNewVal()==tMANUAL &&
        TargetFanState->getVal() != tMANUAL){ 
@@ -82,10 +86,52 @@ void NVS_init(){
 
     return(true);                                   
   
-  } // update
+} // update
 
+void RECUP::inc(){
+  if (RotationSpeed->getVal() < MAX_SPEED){
+    RotationSpeed->setVal(RotationSpeed->getVal() + STEP_SPEED);
+    setSpeed();
+  }
+}
+
+void RECUP::dec(){
+  if (RotationSpeed->getVal() > MIN_SPEED){
+    RotationSpeed->setVal(RotationSpeed->getVal() - STEP_SPEED);
+    setSpeed();
+  }
+}
+
+void RECUP::OnOff(){
+  Active->setVal(!Active->getVal());
+  setFanState();
+}
+
+void RECUP::setFanState(){
+  
+  if (Active->getVal() == OFF) {
+      LOG1("Active->getVal() == ");
+      LOG1(Active->getVal());
+      LOG1("\n");
+      pwmPin->set(50);
+    }else {
+      LOG1("Active->getVal() == ");
+      LOG1(Active->getVal());
+      LOG1("\n");
+      
+      setSpeed();
+    }   
+}
+
+void RECUP::setSpeed(){
+  pwmPin->set( (RotationSpeed->getVal() + 5300)/108 );
+  LOG1("RotationSpeed ");
+  LOG1(RotationSpeed->getVal());
+  LOG1("\n");
+}
   void RECUP::loop(){
-    //LOG1("Loop\n");                                     
+    //LOG1("Loop\n");
+                                        
   }
       
 

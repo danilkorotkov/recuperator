@@ -6,6 +6,9 @@
 #include "extras/PwmPin.h"
 
 #define ROTATION_SPEED       0
+#define MIN_SPEED            1000
+#define MAX_SPEED            5300
+#define STEP_SPEED           100
 
 #define ON                   1
 #define OFF                  0
@@ -24,14 +27,12 @@
 
 struct RECUP;
 
-void NVS_init();
-
 struct FanStruct {
     uint8_t act       = OFF;
     uint8_t target    = tAUTO;
     uint8_t current   = sIDLE;
     int     dir       = OUTTAKE; 
-    float   fanspeed  = 0;
+    float   fanspeed  = 1000;
 };
 
 extern struct WordStruct {
@@ -56,6 +57,11 @@ struct RECUP : Service::Fan {         // First we create a derived class from th
   boolean update();                                   
   void loop();
   void PollCurrentState();
+  void inc();
+  void dec();
+  void setSpeed();
+  void OnOff();
+  void setFanState();
 };
 
 //////

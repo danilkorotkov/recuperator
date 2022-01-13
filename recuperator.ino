@@ -1,6 +1,7 @@
 #include "HomeSpan.h" 
-#include "FanClass.h"
 
+#include "FanClass.h"
+RECUP *recuperator;
 
 #include "PCF8583.h"
 // declare an instance of the library for IC at address 0xA0
@@ -38,8 +39,15 @@ void encloop(){
     // ваш код
   }
   
-  if (enc1.isRight()) Serial.println("Right");         // если был поворот
-  if (enc1.isLeft()) Serial.println("Left");
+  if (enc1.isRight()) {
+    Serial.println("Right");         // если был поворот
+    recuperator->inc();
+  }
+  
+  if (enc1.isLeft()) {
+    Serial.println("Left");
+    recuperator->dec();
+  }
   
   if (enc1.isRightH()) Serial.println("Right holded"); // если было удержание + поворот
   if (enc1.isLeftH()) Serial.println("Left holded");
@@ -48,7 +56,13 @@ void encloop(){
   //if (enc1.isRelease()) Serial.println("Release");     // то же самое, что isClick
   
   if (enc1.isClick()) Serial.println("Click");         // одиночный клик
-  if (enc1.isSingle()) Serial.println("Single");       // одиночный клик (с таймаутом для двойного)
+  
+  if (enc1.isSingle()){
+    Serial.println("Single");       // одиночный клик (с таймаутом для двойного)
+     recuperator->OnOff();
+  }
+  
+  
   if (enc1.isDouble()) Serial.println("Double");       // двойной клик
   
   
@@ -82,7 +96,7 @@ void HomeKit(){
     new Service::HAPProtocolInformation();      
       new Characteristic::Version("1.1.0"); 
   
-    new RECUP();
+    recuperator = new RECUP();
 }
 
 void drawStatus() {
@@ -136,7 +150,7 @@ void loop() {
     rotSpeed = 30000*counter.getCount()/(millis() - CurrentTime);
     counter.setCount(0);
     CurrentTime = millis();
-    Serial.println(rotSpeed);
+    //Serial.println(rotSpeed);
     LCDoutput.Speed = String(rotSpeed);
 
     display.clear();
