@@ -27,14 +27,6 @@
 
 struct RECUP;
 
-struct FanStruct {
-    uint8_t act       = OFF;
-    uint8_t target    = tAUTO;
-    uint8_t current   = sIDLE;
-    int     dir       = OUTTAKE; 
-    float   fanspeed  = 1000;
-};
-
 extern struct WordStruct {
     String inTemp     = "21.5ºC";
     String outTemp    = "21.5ºC";
@@ -62,6 +54,7 @@ struct RECUP : Service::Fan {         // First we create a derived class from th
   void setSpeed();
   void OnOff();
   void setFanState();
+  void lcdStatus();
 };
 
 //////

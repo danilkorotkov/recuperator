@@ -2,8 +2,6 @@
 #include <nvs_flash.h>
 #include "FanClass.h"
 
-struct FanStruct FanState;
-
 ////////////////////////////
    
 RECUP::RECUP() : Service::Fan(){
@@ -42,9 +40,9 @@ RECUP::RECUP() : Service::Fan(){
     attachInterruptArg(this->OpSensorPin.PIN, isr, &(this->OpSensorPin), CHANGE);
     attachInterruptArg(this->ObSensorPin.PIN, isr, &(this->ObSensorPin), CHANGE);         
 */    
-    if (Active->getVal() == ON){
-      setSpeed();
-    }
+    setFanState();
+    lcdStatus();
+    
     LOG1("Constructing successful!\n");
 } // end constructor
 
@@ -56,7 +54,9 @@ boolean RECUP::update(){
   LOG1("Updating fan state ...\n");
   if (Active->updated()){
     Active->setVal(Active->getNewVal());
-    setFanState(); 
+    
+  lcdStatus();
+  setFanState(); 
   }
 
   
@@ -127,6 +127,15 @@ void RECUP::setSpeed(){
   LOG1(RotationSpeed->getVal());
   LOG1("\n");
 }
+
+void RECUP::lcdStatus(){
+  if (Active->getVal() == OFF){
+    LCDoutput.Status = "Выкл";
+  } else{
+    LCDoutput.Status = RotationDirection->getVal()==OUTTAKE? "Вытяжка":"Приток"; //outtake?
+  }
+}
+
 /*  void RECUP::loop(){
     //LOG1("Loop\n");
                                         
