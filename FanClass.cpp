@@ -2,8 +2,6 @@
 #include <nvs_flash.h>
 #include "FanClass.h"
 
-float curPWM=68;
-
 struct FanStruct FanState;
 
 ////////////////////////////
@@ -129,12 +127,12 @@ void RECUP::setSpeed(){
   LOG1(RotationSpeed->getVal());
   LOG1("\n");
 }
-  void RECUP::loop(){
+/*  void RECUP::loop(){
     //LOG1("Loop\n");
                                         
   }
       
-
+*/
 
     
  

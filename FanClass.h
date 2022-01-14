@@ -36,8 +36,8 @@ struct FanStruct {
 };
 
 extern struct WordStruct {
-    String inTemp     = "21.5C";
-    String outTemp    = "21.5C";
+    String inTemp     = "21.5ºC";
+    String outTemp    = "21.5ºC";
     String Speed      = "0";
     String Status     = "Выкл";
 }LCDoutput;
@@ -55,7 +55,7 @@ struct RECUP : Service::Fan {         // First we create a derived class from th
      
   RECUP();
   boolean update();                                   
-  void loop();
+  //void loop();
   void PollCurrentState();
   void inc();
   void dec();

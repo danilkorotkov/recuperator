@@ -19,6 +19,20 @@ unsigned long CounterTime     = 0;   //
 #include "GyverEncoder.h"
 Encoder enc1(CLK, DT, SW);  // encoder + button
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+// GPIO where the DS18B20 is connected to
+const int oneWireBus = 17;     
+
+// Setup a oneWire instance to communicate with any OneWire devices
+OneWire oneWire(oneWireBus);
+
+// Pass our oneWire reference to Dallas Temperature sensor 
+DallasTemperature sensors(&oneWire);
+
+
+
+
 #include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
 
 // Initialize the OLED display using Wire library
@@ -122,6 +136,12 @@ void drawStatus() {
 void setup() {
   Serial.begin(115200);
 
+  // Start the DS18B20 sensor
+  sensors.begin();
+  sensors.requestTemperatures();
+  delay(1000);
+  sensors.requestTemperatures();
+  
   Serial.println("LCD test");
   display.init();
   display.flipScreenVertically();
@@ -147,6 +167,14 @@ void loop() {
   uint32_t rotSpeed;
   homeSpan.poll();
   if ( (millis() - CurrentTime) > LCDTimeout ) {
+
+    float temperatureC = sensors.getTempCByIndex(0);
+    sensors.requestTemperatures();
+    if(temperatureC != DEVICE_DISCONNECTED_C) {
+      LCDoutput.inTemp = String(temperatureC, 1) + "ºC";
+    }
+
+    
     rotSpeed = 30000*counter.getCount()/(millis() - CurrentTime);
     counter.setCount(0);
     CurrentTime = millis();
