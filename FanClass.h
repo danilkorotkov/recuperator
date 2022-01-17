@@ -47,7 +47,7 @@ struct RECUP : Service::Fan {         // First we create a derived class from th
      
   RECUP();
   boolean update();                                   
-  //void loop();
+  void loop();
   void PollCurrentState();
   void inc();
   void dec();

@@ -117,10 +117,15 @@ void RECUP::setFanState(){
 }
 
 void RECUP::setSpeed(){
-  pwmPin->set( (RotationSpeed->getVal() + 5300)/108 );
+  //float pwmData = float(RotationSpeed->getVal())/108 + float(5300)/108;
+  float pwmData = 0.0078*(RotationSpeed->getVal()) + 56.3;
+  pwmPin->set( pwmData );
   LCDoutput.Speed = String(RotationSpeed->getVal());
   LOG1("RotationSpeed ");
-  LOG1(RotationSpeed->getVal());
+  LOG1(LCDoutput.Speed);
+  LOG1("\n");
+  LOG1("PWM ");
+  LOG1(String(pwmData));
   LOG1("\n");
 }
 
@@ -132,12 +137,10 @@ void RECUP::lcdStatus(){
   }
 }
 
-/*  void RECUP::loop(){
-    //LOG1("Loop\n");
+void RECUP::loop(){
+   //LOG1("Loop\n");
                                         
-  }
-      
-*/
+}
 
     
  
