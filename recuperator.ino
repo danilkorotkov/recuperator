@@ -40,6 +40,9 @@ SSD1306  display(0x3c, sda, scl);
 
 unsigned long CurrentTime     = 0;   // опрос
 unsigned long LCDTimeout   = 1000;   // опрос
+unsigned long RotTimeout   = 5000;   // опрос
+unsigned long RotTime      = 0;   // опрос
+
 WordStruct LCDoutput;
 
 void IRAM_ATTR isrENC() {
@@ -56,11 +59,19 @@ void encloop(){
   if (enc1.isRight()) {
     Serial.println("Right");         // если был поворот
     recuperator->inc();
+    display.clear();
+    drawStatus();
+    //counter.setCount(0);
+    //RotTime = millis();
   }
   
   if (enc1.isLeft()) {
     Serial.println("Left");
     recuperator->dec();
+    display.clear();
+    drawStatus();
+    //counter.setCount(0);
+    //RotTime = millis();
   }
   
   if (enc1.isRightH()) Serial.println("Right holded"); // если было удержание + поворот
@@ -82,6 +93,7 @@ void encloop(){
   
   if (enc1.isHolded()) Serial.println("Holded");       // если была удержана и энк не поворачивался
   //if (enc1.isHold()) Serial.println("Hold");         // возвращает состояние кнопки
+
 }
 
 
@@ -118,10 +130,12 @@ void drawStatus() {
     display.setTextAlignment(TEXT_ALIGN_LEFT);
     display.setFont(ArialMT_Plain_16);
     display.drawString(0, 0, LCDoutput.inTemp);
+    display.drawString(0, 16, "вн");
 
     display.setTextAlignment(TEXT_ALIGN_RIGHT);
     display.setFont(ArialMT_Plain_16);
     display.drawString(128, 0, LCDoutput.outTemp);
+    display.drawString(128, 16, "нар");
    
     display.setTextAlignment(TEXT_ALIGN_CENTER);
     display.setFont(ArialMT_Plain_24);
@@ -174,13 +188,15 @@ void loop() {
       LCDoutput.inTemp = String(temperatureC, 1) + "ºC";
     }
 
+    if ( (millis() - RotTime) > RotTimeout ) {
+      rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
+      counter.setCount(0);
+      //LCDoutput.Speed = String(rotSpeed);
+      Serial.print("Aver speed ");Serial.println(rotSpeed);
+      RotTime = millis();
+    }
     
-    rotSpeed = 30000*counter.getCount()/(millis() - CurrentTime);
-    counter.setCount(0);
     CurrentTime = millis();
-    //Serial.println(rotSpeed);
-    LCDoutput.Speed = String(rotSpeed);
-
     display.clear();
     drawStatus();
     display.display();

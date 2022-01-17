@@ -90,6 +90,7 @@ void RECUP::inc(){
   if (RotationSpeed->getVal() < MAX_SPEED){
     RotationSpeed->setVal(RotationSpeed->getVal() + STEP_SPEED);
     setSpeed();
+    LCDoutput.Speed = String(RotationSpeed->getVal());
   }
 }
 
@@ -97,6 +98,7 @@ void RECUP::dec(){
   if (RotationSpeed->getVal() > MIN_SPEED){
     RotationSpeed->setVal(RotationSpeed->getVal() - STEP_SPEED);
     setSpeed();
+    LCDoutput.Speed = String(RotationSpeed->getVal());
   }
 }
 
@@ -108,21 +110,15 @@ void RECUP::OnOff(){
 void RECUP::setFanState(){
   
   if (Active->getVal() == OFF) {
-      LOG1("Active->getVal() == ");
-      LOG1(Active->getVal());
-      LOG1("\n");
       pwmPin->set(50);
     }else {
-      LOG1("Active->getVal() == ");
-      LOG1(Active->getVal());
-      LOG1("\n");
-      
       setSpeed();
     }   
 }
 
 void RECUP::setSpeed(){
   pwmPin->set( (RotationSpeed->getVal() + 5300)/108 );
+  LCDoutput.Speed = String(RotationSpeed->getVal());
   LOG1("RotationSpeed ");
   LOG1(RotationSpeed->getVal());
   LOG1("\n");
