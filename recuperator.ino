@@ -197,6 +197,9 @@ void loop() {
       LCDoutput.outTemp = String(temperatureC, 1) + "ºC";
     }   
 
+    Serial.print("IN temp:  ");Serial.println(LCDoutput.inTemp);
+    Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
+
     if ( (millis() - RotTime) > RotTimeout ) {
       uint32_t rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
       counter.setCount(0);
