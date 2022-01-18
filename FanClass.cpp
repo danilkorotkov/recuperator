@@ -98,6 +98,7 @@ void RECUP::dec(){
 void RECUP::OnOff(){
   Active->setVal(!Active->getVal());
   setFanState();
+  lcdStatus();
 }
 
 void RECUP::setFanState(){

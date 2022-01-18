@@ -84,7 +84,10 @@ void encloop(){
   if (enc1.isDouble()) Serial.println("Double");       // двойной клик
   
   
-  if (enc1.isHolded()) Serial.println("Holded");       // если была удержана и энк не поворачивался
+  if (enc1.isHolded()) { // если была удержана и энк не поворачивался
+    Serial.println("Holded");
+    recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
+  }
   //if (enc1.isHold()) Serial.println("Hold");         // возвращает состояние кнопки
 
 }
@@ -109,7 +112,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("1.0"); 
+      new Characteristic::FirmwareRevision("1.1"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
