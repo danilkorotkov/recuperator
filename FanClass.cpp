@@ -72,6 +72,7 @@ boolean RECUP::update(){
     setSpeed();
   } else {
     RotationDirection->setVal(RotationDirection->getVal());
+    LOG1("Changing direction is not allowed in AUTO mode\n");
   }
 
 
