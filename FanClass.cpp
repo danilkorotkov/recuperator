@@ -1,7 +1,6 @@
-#include <nvs.h>
-#include <nvs_flash.h>
 #include "FanClass.h"
-
+float pwmData;
+unsigned long HSCurrentTime     = 0;   // опрос
 ////////////////////////////
    
 RECUP::RECUP() : Service::Fan(){
@@ -42,7 +41,7 @@ RECUP::RECUP() : Service::Fan(){
 */    
     setFanState();
     lcdStatus();
-    
+    HSCurrentTime = millis();
     LOG1("Constructing successful!\n");
 } // end constructor
 
@@ -59,28 +58,22 @@ boolean RECUP::update(){
   setFanState(); 
   }
 
-  
-  
   if (RotationSpeed->updated()){
     RotationSpeed->setVal(RotationSpeed->getNewVal());
     setSpeed();
   }
 
-    if(TargetFanState->getNewVal()==tMANUAL &&
-       TargetFanState->getVal() != tMANUAL){ 
-                                                              
-                                                              
-      LOG1("Manual mode\n");
-      
-      TargetFanState->setVal(tMANUAL);  
-          
-    
-    } else if(TargetFanState->getNewVal()==tAUTO &&
-              TargetFanState->getVal() != tAUTO){
+  if (TargetFanState->updated()){
+    TargetFanState->setVal(TargetFanState->getNewVal());
+  }
 
-      LOG1("Auto mode\n");                                 
-      TargetFanState->setVal(tAUTO);
-    }   
+  if (RotationDirection->updated() && TargetFanState->getVal() == tMANUAL){
+    RotationDirection->setVal(RotationDirection->getNewVal());
+    setSpeed();
+  } else {
+    RotationDirection->setVal(RotationDirection->getVal());
+  }
+
 
     return(true);                                   
   
@@ -111,15 +104,23 @@ void RECUP::setFanState(){
   
   if (Active->getVal() == OFF) {
       pwmPin->set(50);
+      CurrentFanState->setVal(sIDLE);
     }else {
+      CurrentFanState->setVal(sBLOW);
       setSpeed();
     }   
 }
 
 void RECUP::setSpeed(){
   //float pwmData = float(RotationSpeed->getVal())/108 + float(5300)/108;
-  float pwmData = 0.0078*(RotationSpeed->getVal()) + 56.3;
+  if (RotationDirection->getVal() == OUTTAKE) {
+    pwmData = 0.0078*(RotationSpeed->getVal()) + 56.3;
+  } else {
+    pwmData = -0.0081*(RotationSpeed->getVal()) + 46.084;
+  }
+  
   pwmPin->set( pwmData );
+  
   LCDoutput.Speed = String(RotationSpeed->getVal());
   LOG1("RotationSpeed ");
   LOG1(LCDoutput.Speed);
@@ -138,6 +139,13 @@ void RECUP::lcdStatus(){
 }
 
 void RECUP::loop(){
+  if ( (millis() - HSCurrentTime) > DUTY_CYCLE * (2*MAX_SPEED - RotationSpeed->getVal())/MAX_SPEED && TargetFanState->getVal() == tAUTO){
+    LOG1("Change direction in the cycle of "); LOG1((millis() - HSCurrentTime)/1000); LOG1("s\n");
+    RotationDirection->setVal(!RotationDirection->getVal());
+    setFanState();
+    lcdStatus();
+    HSCurrentTime = millis();  
+  }
    //LOG1("Loop\n");
                                         
 }
