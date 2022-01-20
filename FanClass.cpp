@@ -16,32 +16,15 @@ RECUP::RECUP() : Service::Fan(){
     this->pwmPin        = new LedPin(SpeedPin, 50, 25000);
 
     RotationSpeed->setRange(MIN_SPEED,MAX_SPEED,STEP_SPEED); //sets the range to be from a min of 1000 to a max of 5300, in steps of 1000
-                                                              //speed = 108 * duty - 5300
-                                                              //duty  = (speed + 5300) / 108
-   
-/*                         
-    pinMode(this->OpenPin,OUTPUT); 
-    digitalWrite(this->OpenPin,LOW);
-    ButtonArray[0] = this->OpenPin;
-                                              
-    pinMode(this->ClosePin,OUTPUT);
-    digitalWrite(this->ClosePin,LOW);
-    ButtonArray[1] = this->ClosePin;  
-                      
-    pinMode(this->StopPin,OUTPUT);
-    digitalWrite(this->StopPin,LOW);
-    ButtonArray[2] = this->StopPin;
-    
-    pinMode(this->ClSensorPin.PIN, INPUT_PULLUP);
-    pinMode(this->OpSensorPin.PIN, INPUT_PULLUP);
-    pinMode(this->ObSensorPin.PIN, INPUT_PULLUP);
-    attachInterruptArg(this->ClSensorPin.PIN, isr, &(this->ClSensorPin), CHANGE);
-    attachInterruptArg(this->OpSensorPin.PIN, isr, &(this->OpSensorPin), CHANGE);
-    attachInterruptArg(this->ObSensorPin.PIN, isr, &(this->ObSensorPin), CHANGE);         
-*/    
+ 
+
     setFanState();
     lcdStatus();
     HSCurrentTime = millis();
+
+    pinMode(relayPin,OUTPUT); 
+    digitalWrite(relayPin,HIGH);  
+    
     LOG1("Constructing successful!\n");
 } // end constructor
 

@@ -6,7 +6,7 @@ RECUP *recuperator;
 #include "PCF8583.h"
 // declare an instance of the library for IC at address 0xA0
 // (A0 pin connected to ground)
-#define sda  21
+#define sda  23
 #define scl  22
 PCF8583 counter(0xA0, sda, scl);
 unsigned long CounterTime     = 0;   // 
@@ -84,7 +84,7 @@ void encloop(){
   if (enc1.isDouble()) Serial.println("Double");       // двойной клик
   
   
-  if (enc1.isHolded()) { // если была удержана и энк не поворачивался
+  if (enc1.isHolded()) {                                // если была удержана и энк не поворачивался
     Serial.println("Holded");
     recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
   }
@@ -199,8 +199,8 @@ void loop() {
     if(temperatureC != DEVICE_DISCONNECTED_C) {
       LCDoutput.outTemp = String(temperatureC, 1) + "ºC";
     }   
-
-    Serial.print("IN temp:  ");Serial.println(LCDoutput.inTemp);
+ 
+    Serial.print("IN  temp:  ");Serial.println(LCDoutput.inTemp);
     Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
 
     if ( (millis() - RotTime) > RotTimeout ) {
@@ -220,8 +220,6 @@ void loop() {
     CurrentTime = millis();
 
     drawStatus();
-    
-    //Serial.println("LCD updated");
   }
   encloop();
 }

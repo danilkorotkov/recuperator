@@ -25,6 +25,7 @@
 #define tAUTO                1
 
 #define SpeedPin             13
+#define relayPin             21
 
 struct RECUP;
 
