@@ -36,9 +36,12 @@ DallasTemperature outsensors(&outoneWire);
 SSD1306  display(0x3c, sda, scl);
 
 unsigned long CurrentTime     = 0;   // опрос
-unsigned long LCDTimeout   = 1000;   // опрос
+unsigned long LCDTimeout   = 24/1000;   // опрос
 unsigned long RotTimeout   = 5000;   // опрос
 unsigned long RotTime      = 0;   // опрос
+unsigned long TempTimeout  = 1500;   // опрос
+unsigned long TempTime     = 0;   // 
+
 
 WordStruct LCDoutput;
 
@@ -57,14 +60,14 @@ void encloop(){
     Serial.println("Right");         // если был поворот
     recuperator->inc();
 
-    drawStatus();
+    //drawStatus();
   }
   
   if (enc1.isLeft()) {
     Serial.println("Left");
     recuperator->dec();
 
-    drawStatus();
+    //drawStatus();
   }
   
   if (enc1.isRightH()) Serial.println("Right holded"); // если было удержание + поворот
@@ -112,7 +115,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("1.1"); 
+      new Characteristic::FirmwareRevision("1.2"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -162,7 +165,7 @@ void setup() {
   insensors.requestTemperatures();
   outsensors.begin();
   outsensors.requestTemperatures();
-  delay(1000);
+  TempTime = millis();
 
   HomeKit();
 
@@ -188,21 +191,24 @@ void loop() {
   homeSpan.poll();
   if ( (millis() - CurrentTime) > LCDTimeout ) {
 
-    float temperatureC = insensors.getTempCByIndex(0);
-    insensors.requestTemperatures();
-    if(temperatureC != DEVICE_DISCONNECTED_C) {
-      LCDoutput.inTemp = String(temperatureC, 1) + "ºC";
+    if ( (millis() - TempTime) > TempTimeout ) {
+      float temperatureC = insensors.getTempCByIndex(0);
+      insensors.requestTemperatures();
+      if(temperatureC != DEVICE_DISCONNECTED_C) {
+        LCDoutput.inTemp = String(temperatureC, 1) + "ºC";
+      }
+  
+      temperatureC = outsensors.getTempCByIndex(0);
+      outsensors.requestTemperatures(); 
+      if(temperatureC != DEVICE_DISCONNECTED_C) {
+        LCDoutput.outTemp = String(temperatureC, 1) + "ºC";
+      }   
+  
+      TempTime = millis();
+      Serial.print("IN  temp:  ");Serial.println(LCDoutput.inTemp);
+      Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
     }
-
-    temperatureC = outsensors.getTempCByIndex(0);
-    outsensors.requestTemperatures(); 
-    if(temperatureC != DEVICE_DISCONNECTED_C) {
-      LCDoutput.outTemp = String(temperatureC, 1) + "ºC";
-    }   
- 
-    Serial.print("IN  temp:  ");Serial.println(LCDoutput.inTemp);
-    Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
-
+    
     if ( (millis() - RotTime) > RotTimeout ) {
       uint32_t rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
       counter.setCount(0);
