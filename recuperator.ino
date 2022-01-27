@@ -14,8 +14,13 @@ unsigned long CounterTime     = 0;   //
 #define CLK 25
 #define DT  26
 #define SW  27
-#include "GyverEncoder.h"
-Encoder enc1(CLK, DT, SW);  // encoder + button
+
+/*#include "GyverEncoder.h"
+Encoder enc1(CLK, DT, SW);  // encoder + button */
+#define EB_FAST 50 
+#include "EncButton.h"
+EncButton<EB_TICK, DT, CLK, 27> enc1;  // энкодер с кнопкой <A, B, KEY>
+TaskHandle_t h_encloop;
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -35,66 +40,74 @@ DallasTemperature outsensors(&outoneWire);
 // Initialize the OLED display using Wire library
 SSD1306  display(0x3c, sda, scl);
 
-unsigned long CurrentTime     = 0;   // опрос
-unsigned long LCDTimeout   = 24/1000;   // опрос
-unsigned long RotTimeout   = 5000;   // опрос
-unsigned long RotTime      = 0;   // опрос
-unsigned long TempTimeout  = 1500;   // опрос
+unsigned long CurrentTime  = 0;   // обновление эрана
+unsigned long LCDTimeout   = 24/1000; 
+
+unsigned long RotTimeout   = 5000;   // обновление чтения оборотов
+unsigned long RotTime      = 0;   
+
+unsigned long TempTimeout  = 1500;   // чтение термодатчков
 unsigned long TempTime     = 0;   // 
 
+static volatile float inc_dec=0; // чтение ожидание окончания вращения энкодера
+static volatile unsigned long inc_dec_time=0;
+unsigned long inc_dec_timeout=500;
+
+//bool isISRset=0;
 
 WordStruct LCDoutput;
 
 void IRAM_ATTR isrENC() {
-  enc1.tick();  // encoder int
+//void isrENC() {
+  //enc1.tick();  // encoder int
+  enc1.tickISR();
+  inc_dec_time = millis();
 }
 
-void encloop(){
-  enc1.tick();
-  
-  if (enc1.isTurn()) {     // если был совершён поворот (индикатор поворота в любую сторону)
-    // ваш код
-  }
-  
-  if (enc1.isRight()) {
-    Serial.println("Right");         // если был поворот
-    recuperator->inc();
+void encloop(void * pvParameters){
 
-    //drawStatus();
-  }
-  
-  if (enc1.isLeft()) {
-    Serial.println("Left");
-    recuperator->dec();
+  attachInterrupt(CLK, isrENC, CHANGE);    
+  attachInterrupt(DT,  isrENC, CHANGE);   
+  attachInterrupt(SW,  isrENC, CHANGE);
 
-    //drawStatus();
-  }
-  
-  if (enc1.isRightH()) Serial.println("Right holded"); // если было удержание + поворот
-  if (enc1.isLeftH()) Serial.println("Left holded");
-  
-  //if (enc1.isPress()) Serial.println("Press");         // нажатие на кнопку (+ дебаунс)
-  //if (enc1.isRelease()) Serial.println("Release");     // то же самое, что isClick
-  
-  if (enc1.isClick()) Serial.println("Click");         // одиночный клик
-  
-  if (enc1.isSingle()){
-    Serial.println("Single");       // одиночный клик (с таймаутом для двойного)
-     recuperator->OnOff();
-  }
-  
-  
-  if (enc1.isDouble()) Serial.println("Double");       // двойной клик
-  
-  
-  if (enc1.isHolded()) {                                // если была удержана и энк не поворачивался
-    Serial.println("Holded");
-    recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
-  }
-  //if (enc1.isHold()) Serial.println("Hold");         // возвращает состояние кнопки
+  for (;;){
+    if (enc1.tick()) {
+    
+      if (enc1.left()) {
+        inc_dec--;
+      }//left
+      
+      if (enc1.right()) {
+       inc_dec++;
+      }//right 
 
+      if (enc1.click()){
+         on_off_enc(false);
+         recuperator->OnOff();
+         on_off_enc(true);
+      }//click
+
+      if (enc1.held()) {
+        on_off_enc(false);
+        recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
+        on_off_enc(true);
+      }//held
+      enc1.resetState();
+    } //tick  
+  }   //loop
+}     //task
+
+void on_off_enc(bool on){
+  if (on){
+    gpio_intr_enable(gpio_num_t(CLK));
+    gpio_intr_enable(gpio_num_t(DT));
+    gpio_intr_enable(gpio_num_t(SW));
+  }else{
+    gpio_intr_disable(gpio_num_t(CLK));
+    gpio_intr_disable(gpio_num_t(DT));
+    gpio_intr_disable(gpio_num_t(SW));
+  }
 }
-
 
 void HomeKit(){
   homeSpan.setApSSID("Recup-AP");
@@ -175,12 +188,18 @@ void setup() {
   display.setFont(ArialMT_Plain_10);
   
   Serial.println("Enc test");
-  attachInterrupt(CLK, isrENC, CHANGE);    
-  attachInterrupt(DT,  isrENC, CHANGE);   
-  attachInterrupt(SW,  isrENC, CHANGE);
-  enc1.setType(TYPE2);
 
-    // configure PCF8586 to event counter mode and reset counts
+  xTaskCreatePinnedToCore(
+                    encloop,     /* Task function. */
+                    "encloop",   /* name of task. */
+                    10000,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &h_encloop, /* Task handle to keep track of created task */
+                    0);          /* pin task to core 0 */                  
+  
+  
+  // configure PCF8586 to event counter mode and reset counts
   counter.setMode(MODE_EVENT_COUNTER);
   counter.setCount(0);
   CurrentTime = millis();
@@ -188,7 +207,9 @@ void setup() {
 }
 
 void loop() {
+  
   homeSpan.poll();
+  
   if ( (millis() - CurrentTime) > LCDTimeout ) {
 
     if ( (millis() - TempTime) > TempTimeout ) {
@@ -225,7 +246,26 @@ void loop() {
     
     CurrentTime = millis();
 
+    if (inc_dec != 0 & (millis() - inc_dec_time) > inc_dec_timeout){
+      float tempSpeed = recuperator->RotationSpeed->getVal() + inc_dec * 100;
+      inc_dec = 0;
+      
+      if (tempSpeed > 5300) {tempSpeed=5300;}
+      else if (tempSpeed < 1000)  {tempSpeed=1000;}
+
+      if (tempSpeed != recuperator->RotationSpeed->getVal()){
+        
+        on_off_enc(false);
+        
+        recuperator->RotationSpeed->setVal(tempSpeed);
+        recuperator->setSpeed();
+
+        on_off_enc(true);
+      }
+    }
+
+
     drawStatus();
   }
-  encloop();
+  //encloop();
 }
