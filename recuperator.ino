@@ -41,7 +41,7 @@ DallasTemperature outsensors(&outoneWire);
 SSD1306  display(0x3c, sda, scl);
 
 unsigned long CurrentTime  = 0;   // обновление эрана
-unsigned long LCDTimeout   = 24/1000; 
+unsigned long LCDTimeout   = 20/1000; 
 
 unsigned long RotTimeout   = 5000;   // обновление чтения оборотов
 unsigned long RotTime      = 0;   
@@ -58,8 +58,6 @@ unsigned long inc_dec_timeout=500;
 WordStruct LCDoutput;
 
 void IRAM_ATTR isrENC() {
-//void isrENC() {
-  //enc1.tick();  // encoder int
   enc1.tickISR();
   inc_dec_time = millis();
 }
@@ -159,13 +157,51 @@ void drawStatus() {
     display.drawString(64, 45, LCDoutput.Status);
 
     
-    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    display.setTextAlignment(TEXT_ALIGN_RIGHT);
     if (recuperator->TargetFanState->getVal() == tAUTO){
-      display.drawString(0, 45, "@");
+      display.drawString(128, 45, "@");
     } else{
-      display.drawString(0, 45, "®");  
+      display.drawString(128, 45, "®");  
     }
-    
+
+
+    if (WiFi.status() == WL_CONNECTED) {
+      long rssi = WiFi.RSSI(); 
+      if (rssi >= -55) {
+        display.drawRect(0,62,4,1);
+        display.drawRect(5,61,4,2);
+        display.fillRect(10,59,4,4);
+        display.fillRect(15,57,4,6);
+        display.fillRect(20,55,4,8);
+      }else if (rssi < -55 & rssi > -65) {
+        display.drawRect(0,62,4,1);
+        display.drawRect(5,61,4,2);
+        display.fillRect(10,59,4,4);
+        display.fillRect(15,57,4,6);
+        display.drawRect(20,55,4,8);
+      }else if (rssi < -65 & rssi > -75) {
+        display.drawRect(0,62,4,1);
+        display.drawRect(5,61,4,2);
+        display.fillRect(10,59,4,4);
+        display.drawRect(15,57,4,6);
+        display.drawRect(20,55,4,8);
+      }else if (rssi < -75) {
+        display.drawRect(0,62,4,1);
+        display.drawRect(5,61,4,2);
+        display.drawRect(10,59,4,4);
+        display.drawRect(15,57,4,6);
+        display.drawRect(20,55,4,8);
+      }
+    }else {
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.setFont(ArialMT_Plain_10);
+      display.drawString(0, 45, "x");
+      display.drawRect(5,61,4,2);
+      display.drawRect(10,59,4,4);
+      display.drawRect(15,57,4,6);
+      display.drawRect(20,55,4,8);
+    }
+
     display.display();
  
 }
