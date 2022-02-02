@@ -126,7 +126,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("1.2"); 
+      new Characteristic::FirmwareRevision("1.3"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
