@@ -126,7 +126,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("1.3"); 
+      new Characteristic::FirmwareRevision("1.4"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -262,16 +262,17 @@ void loop() {
       }   
   
       TempTime = millis();
-      Serial.print("IN  temp:  ");Serial.println(LCDoutput.inTemp);
-      Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
     }
     
     if ( (millis() - RotTime) > RotTimeout ) {
       uint32_t rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
       counter.setCount(0);
-      //LCDoutput.Speed = String(rotSpeed);
-      Serial.print("Aver speed ");Serial.println(rotSpeed);
       RotTime = millis();
+      //LCDoutput.Speed = String(rotSpeed);
+      Serial.print("Aver speed ");Serial.println(rotSpeed);   
+      Serial.print("IN  temp:  ");Serial.println(LCDoutput.inTemp);
+      Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
+      Serial.print("Uptime, s:  ");Serial.println(millis()/1000);
       
       if (WiFi.status() != WL_CONNECTED) { 
         Serial.println("Couldn't get a wifi connection");
