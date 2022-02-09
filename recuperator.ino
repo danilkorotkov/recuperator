@@ -3,12 +3,13 @@
 #include "FanClass.h"
 RECUP *recuperator;
 
+#define SDA  23
+#define SCL  22
+
 #include "PCF8583.h"
 // declare an instance of the library for IC at address 0xA0
 // (A0 pin connected to ground)
-#define sda  23
-#define scl  22
-PCF8583 counter(0xA0, sda, scl);
+PCF8583 counter(0xA0, SDA, SCL);
 unsigned long CounterTime     = 0;   // 
 
 #define CLK 25
@@ -19,7 +20,7 @@ unsigned long CounterTime     = 0;   //
 Encoder enc1(CLK, DT, SW);  // encoder + button */
 #define EB_FAST 50 
 #include "EncButton.h"
-EncButton<EB_TICK, DT, CLK, 27> enc1;  // энкодер с кнопкой <A, B, KEY>
+EncButton<EB_TICK, DT, CLK, SW> enc1;  // энкодер с кнопкой <A, B, KEY>
 TaskHandle_t h_encloop;
 
 #include <OneWire.h>
@@ -38,7 +39,7 @@ DallasTemperature outsensors(&outoneWire);
 
 #include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
 // Initialize the OLED display using Wire library
-SSD1306  display(0x3c, sda, scl);
+SSD1306  display(0x3c, SDA, SCL);
 
 unsigned long CurrentTime  = 0;   // обновление эрана
 unsigned long LCDTimeout   = 20/1000; 
@@ -126,7 +127,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("1.4"); 
+      new Characteristic::FirmwareRevision("1.6"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -234,7 +235,6 @@ void setup() {
                     &h_encloop, /* Task handle to keep track of created task */
                     0);          /* pin task to core 0 */                  
   
-  
   // configure PCF8586 to event counter mode and reset counts
   counter.setMode(MODE_EVENT_COUNTER);
   counter.setCount(0);
@@ -269,15 +269,16 @@ void loop() {
       counter.setCount(0);
       RotTime = millis();
       //LCDoutput.Speed = String(rotSpeed);
-      Serial.print("Aver speed ");Serial.println(rotSpeed);   
-      Serial.print("IN  temp:  ");Serial.println(LCDoutput.inTemp);
-      Serial.print("OUT temp:  ");Serial.println(LCDoutput.outTemp);
+      Serial.print("Aver speed  ");Serial.println(rotSpeed);   
+      Serial.print("IN  temp:   ");Serial.println(LCDoutput.inTemp);
+      Serial.print("OUT temp:   ");Serial.println(LCDoutput.outTemp);
       Serial.print("Uptime, s:  ");Serial.println(millis()/1000);
+      Serial.print("Direction:  ");Serial.println(LCDoutput.Status);
       
       if (WiFi.status() != WL_CONNECTED) { 
         Serial.println("Couldn't get a wifi connection");
       }else {
-        Serial.print("WIFI RSSI: ");Serial.println(WiFi.RSSI());
+        Serial.print("WIFI RSSI:  ");Serial.println(WiFi.RSSI());
       }
     }
     
@@ -293,7 +294,7 @@ void loop() {
       if (tempSpeed != recuperator->RotationSpeed->getVal()){
         
         on_off_enc(false);
-        
+        Serial.println("Save and set new speed");
         recuperator->RotationSpeed->setVal(tempSpeed);
         recuperator->setSpeed();
 

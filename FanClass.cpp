@@ -90,7 +90,9 @@ void RECUP::setFanState(){
   if (Active->getVal() == OFF) {
       pwmPin->set(50);
       CurrentFanState->setVal(sIDLE);
+      digitalWrite(relayPin,LOW);
     }else {
+      digitalWrite(relayPin,HIGH);
       CurrentFanState->setVal(sBLOW);
       setSpeed();
     }   
@@ -124,7 +126,7 @@ void RECUP::lcdStatus(){
 }
 
 void RECUP::loop(){
-  if ( (millis() - HSCurrentTime) > DUTY_CYCLE * (2*MAX_SPEED - RotationSpeed->getVal())/MAX_SPEED && TargetFanState->getVal() == tAUTO){
+  if ( (millis() - HSCurrentTime) > DUTY_CYCLE * (2*MAX_SPEED - RotationSpeed->getVal())/MAX_SPEED && TargetFanState->getVal() == tAUTO && Active->getVal() == ON){
     LOG1("Change direction in the cycle of "); LOG1((millis() - HSCurrentTime)/1000); LOG1("s\n");
     RotationDirection->setVal(!RotationDirection->getVal());
     setFanState();
