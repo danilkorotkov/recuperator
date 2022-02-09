@@ -270,12 +270,13 @@ void loop() {
       RotTime = millis();
       //LCDoutput.Speed = String(rotSpeed);
       Serial.println("---------------------------");
-      Serial.print("Aver speed  ");Serial.println(rotSpeed);
-      Serial.print("Targ speed  ");Serial.println(recuperator->RotationSpeed->getVal());   
+      Serial.print("Aver speed: ");Serial.println(rotSpeed);
+      Serial.print("Targ speed: ");Serial.println(recuperator->RotationSpeed->getVal());   
       Serial.print("IN  temp:   ");Serial.println(LCDoutput.inTemp);
       Serial.print("OUT temp:   ");Serial.println(LCDoutput.outTemp);
       Serial.print("Uptime, s:  ");Serial.println(millis()/1000);
-      Serial.print("Direction:  ");Serial.println(LCDoutput.Status);
+      Serial.print("State:      ");Serial.println(LCDoutput.Status);
+      Serial.print("Mode:       ");Serial.println(recuperator->TargetFanState->getVal() == tAUTO? "Auto":"Manual");
             
       if (WiFi.status() != WL_CONNECTED) { 
         Serial.println("Couldn't get a wifi connection");
