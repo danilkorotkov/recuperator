@@ -12,13 +12,13 @@ RECUP *recuperator;
 PCF8583 counter(0xA0, SDA, SCL);
 unsigned long CounterTime     = 0;   // 
 
-#define CLK 25
+#define CLK 27
 #define DT  26
-#define SW  27
+#define SW  25
 
 /*#include "GyverEncoder.h"
 Encoder enc1(CLK, DT, SW);  // encoder + button */
-#define EB_FAST 50 
+//#define EB_FAST 50 
 #include "EncButton.h"
 EncButton<EB_TICK, DT, CLK, SW> enc1;  // энкодер с кнопкой <A, B, KEY>
 TaskHandle_t h_encloop;
@@ -81,15 +81,15 @@ void encloop(void * pvParameters){
       }//right 
 
       if (enc1.click()){
-         on_off_enc(false);
+         //on_off_enc(false);
          recuperator->OnOff();
-         on_off_enc(true);
+         //on_off_enc(true);
       }//click
 
       if (enc1.held()) {
-        on_off_enc(false);
+        //on_off_enc(false);
         recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
-        on_off_enc(true);
+        //on_off_enc(true);
       }//held
       enc1.resetState();
     } //tick  
@@ -297,12 +297,12 @@ void loop() {
 
       if (tempSpeed != recuperator->RotationSpeed->getVal()){
         
-        on_off_enc(false);
+        //on_off_enc(false);
         Serial.println("Save and set new speed");
         recuperator->RotationSpeed->setVal(tempSpeed);
         recuperator->setSpeed();
 
-        on_off_enc(true);
+        //on_off_enc(true);
       }
     }
 
