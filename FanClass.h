@@ -9,7 +9,7 @@
 #define MIN_SPEED            1000
 #define MAX_SPEED            5300
 #define STEP_SPEED           100
-#define DUTY_CYCLE           20000
+#define DUTY_CYCLE           40000
 
 #define ON                   1
 #define OFF                  0

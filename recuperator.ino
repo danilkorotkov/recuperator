@@ -269,17 +269,20 @@ void loop() {
       counter.setCount(0);
       RotTime = millis();
       //LCDoutput.Speed = String(rotSpeed);
-      Serial.print("Aver speed  ");Serial.println(rotSpeed);   
+      Serial.println("---------------------------");
+      Serial.print("Aver speed  ");Serial.println(rotSpeed);
+      Serial.print("Targ speed  ");Serial.println(recuperator->RotationSpeed->getVal());   
       Serial.print("IN  temp:   ");Serial.println(LCDoutput.inTemp);
       Serial.print("OUT temp:   ");Serial.println(LCDoutput.outTemp);
       Serial.print("Uptime, s:  ");Serial.println(millis()/1000);
       Serial.print("Direction:  ");Serial.println(LCDoutput.Status);
-      
+            
       if (WiFi.status() != WL_CONNECTED) { 
         Serial.println("Couldn't get a wifi connection");
       }else {
-        Serial.print("WIFI RSSI:  ");Serial.println(WiFi.RSSI());
+        Serial.print("WIFI RSSI:  ");Serial.print(WiFi.RSSI());Serial.println("dB");
       }
+      Serial.println("---------------------------");
     }
     
     CurrentTime = millis();
