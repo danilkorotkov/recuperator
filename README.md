@@ -11,3 +11,4 @@ Frankenstein foto %)
 
 ![](https://github.com/danilkorotkov/recuperator/blob/main/v1.png)
 ![](https://github.com/danilkorotkov/recuperator/blob/main/v1-1.png)
+![](https://github.com/danilkorotkov/recuperator/blob/main/v1-2.png)
