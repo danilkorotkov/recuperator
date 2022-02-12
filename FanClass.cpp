@@ -18,6 +18,9 @@ RECUP::RECUP() : Service::Fan(){
     RotationSpeed->setRange(MIN_SPEED,MAX_SPEED,STEP_SPEED); //sets the range to be from a min of 1000 to a max of 5300, in steps of 1000
  
 
+    if (TargetFanState->getVal() != tMANUAL){
+      RotationDirection->setVal(OUTTAKE);
+    }
     setFanState();
     lcdStatus();
     HSCurrentTime = millis();
@@ -89,7 +92,7 @@ void RECUP::setFanState(){
   
   if (Active->getVal() == OFF) {
       pwmPin->set(50);
-      CurrentFanState->setVal(sIDLE);
+      CurrentFanState->setVal(sINACTIVE);
       digitalWrite(relayPin,LOW);
     }else {
       digitalWrite(relayPin,HIGH);

@@ -1,5 +1,5 @@
 #include "HomeSpan.h" 
-
+//homespan-ota
 #include "FanClass.h"
 RECUP *recuperator;
 
@@ -223,6 +223,7 @@ void setup() {
   display.init();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
+  Wire.setClock(400000);
   
   Serial.println("Enc test");
 
