@@ -7,6 +7,8 @@ PCF8583 as a rotation counter
 
 KY-040 encoder
 
+19 feb 2022 added GY-21P sensor
+
 Frankenstein foto %)
 
 ![](https://github.com/danilkorotkov/recuperator/blob/main/v1.png)
