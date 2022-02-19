@@ -5,12 +5,9 @@ RECUP *recuperator;
 
 #define SDA  23
 #define SCL  22
+#include <Wire.h>  // Only needed for Arduino 1.6.5 and earlier
 
-#include "PCF8583.h"
-// declare an instance of the library for IC at address 0xA0
-// (A0 pin connected to ground)
-PCF8583 counter(0xA0, SDA, SCL);
-unsigned long CounterTime     = 0;   // 
+#define ROTCNT  35
 
 #define CLK 27
 #define DT  26
@@ -21,7 +18,7 @@ Encoder enc1(CLK, DT, SW);  // encoder + button */
 //#define EB_FAST 50 
 #include "EncButton.h"
 EncButton<EB_TICK, DT, CLK, SW> enc1;  // энкодер с кнопкой <A, B, KEY>
-TaskHandle_t h_encloop;
+TaskHandle_t h_encloop, h_HK_poll;
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -53,14 +50,74 @@ unsigned long TempTime     = 0;   //
 static volatile float inc_dec=0; // чтение ожидание окончания вращения энкодера
 static volatile unsigned long inc_dec_time=0;
 unsigned long inc_dec_timeout=500;
+static volatile uint32_t RotCnt=0;
 
-//bool isISRset=0;
+#include "PCF8583.h"
+// declare an instance of the library for IC at address 0xA0
+// (A0 pin connected to ground)
+PCF8583 counter(0xA0);
+unsigned long CounterTime     = 0;   // 
+
+#include "THP.h" 
+DigooData gy21p;
+
+#include <Adafruit_Sensor.h>
+#include "Adafruit_Si7021.h"
+#include <Adafruit_BMP280.h>
+
+Adafruit_BMP280 bme; // I2C
+Adafruit_Si7021 sensor = Adafruit_Si7021();
 
 WordStruct LCDoutput;
 
 void IRAM_ATTR isrENC() {
   enc1.tickISR();
   inc_dec_time = millis();
+}
+
+void IRAM_ATTR isrROT() {
+  RotCnt++;
+}
+
+void poll_gy21p(){
+  float bmeTemp   = bme.readTemperature();
+  float bmePress  = bme.readPressure()*0.00750062;
+  float SiHum     = sensor.readHumidity();
+  float SiTemp    = sensor.readTemperature();
+  
+  Serial.print("Temp bme:   ");Serial.print(bmeTemp);Serial.println("°C\t");
+  Serial.print("Press bme:  ");Serial.print(bmePress);Serial.println("mmHg\t");
+  Serial.print("Humidity:   ");Serial.print(SiHum, 2);Serial.println("%");
+  Serial.print("Temp Si:    ");Serial.print(SiTemp, 2);Serial.println("°C\t");
+
+  if (bmePress != NAN){
+    gy21p.pressure = bmePress;
+  }
+
+  if (bmeTemp != NAN && SiTemp != NAN){
+    gy21p.temperature = (bmeTemp + SiTemp)/2;
+    gy21p.updated     = millis();
+    gy21p.isNew[0]    = true;
+  }
+
+  if (bmeTemp == NAN && SiTemp != NAN){
+    gy21p.temperature = bmeTemp;
+    gy21p.updated     = millis();
+    gy21p.isNew[0]    = true;
+  }  
+  
+  if (bmeTemp != NAN && SiTemp == NAN){
+    gy21p.temperature = SiTemp;
+    gy21p.updated     = millis();
+    gy21p.isNew[0]    = true;
+  }
+
+  if (SiHum != NAN){
+    gy21p.humidity    = SiHum;
+    gy21p.updated     = millis();
+    gy21p.isNew[1]    = true;
+  }
+  
 }
 
 void encloop(void * pvParameters){
@@ -81,32 +138,23 @@ void encloop(void * pvParameters){
       }//right 
 
       if (enc1.click()){
-         //on_off_enc(false);
          recuperator->OnOff();
-         //on_off_enc(true);
       }//click
 
       if (enc1.held()) {
-        //on_off_enc(false);
         recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
-        //on_off_enc(true);
       }//held
       enc1.resetState();
     } //tick  
   }   //loop
 }     //task
 
-void on_off_enc(bool on){
-  if (on){
-    gpio_intr_enable(gpio_num_t(CLK));
-    gpio_intr_enable(gpio_num_t(DT));
-    gpio_intr_enable(gpio_num_t(SW));
-  }else{
-    gpio_intr_disable(gpio_num_t(CLK));
-    gpio_intr_disable(gpio_num_t(DT));
-    gpio_intr_disable(gpio_num_t(SW));
-  }
-}
+void HK_poll(void * pvParameters){
+
+  for (;;){
+    homeSpan.poll();
+  }   //loop
+}     //task
 
 void HomeKit(){
   homeSpan.setApSSID("Recup-AP");
@@ -134,6 +182,22 @@ void HomeKit(){
       new Characteristic::Version("1.1.0"); 
   
     recuperator = new RECUP();
+
+  new SpanAccessory(); 
+  
+    new Service::AccessoryInformation(); 
+      new Characteristic::Name("Sensor"); 
+      new Characteristic::Manufacturer("Danil"); 
+      new Characteristic::SerialNumber("0000001"); 
+      new Characteristic::Model("beta"); 
+      new Characteristic::FirmwareRevision("0.1"); 
+      new Characteristic::Identify();            
+      
+    new Service::HAPProtocolInformation();      
+      new Characteristic::Version("1.1.0"); 
+  
+    new THP(&gy21p);
+
 }
 
 void drawStatus() {
@@ -209,7 +273,15 @@ void drawStatus() {
 
 void setup() {
   Serial.begin(115200);
+  
+  Wire.begin(SDA, SCL, uint32_t (400000));
 
+  display.init();
+
+  display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_10);
+
+  
   // Start the DS18B20 sensor
   insensors.begin();
   insensors.requestTemperatures();
@@ -219,14 +291,6 @@ void setup() {
 
   HomeKit();
 
-  Serial.println("LCD test");
-  display.init();
-  display.flipScreenVertically();
-  display.setFont(ArialMT_Plain_10);
-  Wire.setClock(400000);
-  
-  Serial.println("Enc test");
-
   xTaskCreatePinnedToCore(
                     encloop,     /* Task function. */
                     "encloop",   /* name of task. */
@@ -234,9 +298,26 @@ void setup() {
                     NULL,        /* parameter of the task */
                     1,           /* priority of the task */
                     &h_encloop, /* Task handle to keep track of created task */
-                    0);          /* pin task to core 0 */                  
+                    1);          /* pin task to core 1 */                  
+
+  xTaskCreatePinnedToCore(
+                    HK_poll,    /* Task function. */
+                    "HK_poll",  /* name of task. */
+                    10000,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &h_HK_poll, /* Task handle to keep track of created task */
+                    0);          /* pin task to core 0 */  
+  
+  delay(1000);
+  
+  bme.begin(BMP280_ADDRESS_ALT);
+  sensor.begin();
+  poll_gy21p();
   
   // configure PCF8586 to event counter mode and reset counts
+  pinMode(ROTCNT,INPUT);
+  attachInterrupt(ROTCNT, isrROT, CHANGE);
   counter.setMode(MODE_EVENT_COUNTER);
   counter.setCount(0);
   CurrentTime = millis();
@@ -245,7 +326,7 @@ void setup() {
 
 void loop() {
   
-  homeSpan.poll();
+  //homeSpan.poll();
   
   if ( (millis() - CurrentTime) > LCDTimeout ) {
 
@@ -268,10 +349,14 @@ void loop() {
     if ( (millis() - RotTime) > RotTimeout ) {
       uint32_t rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
       counter.setCount(0);
+
+      uint32_t cntSpeed = 15000*RotCnt/(millis() - RotTime);
+      RotCnt=0;
       RotTime = millis();
       //LCDoutput.Speed = String(rotSpeed);
       Serial.println("---------------------------");
       Serial.print("Aver speed: ");Serial.println(rotSpeed);
+      Serial.print("CNT  speed: ");Serial.println(cntSpeed);
       Serial.print("Targ speed: ");Serial.println(recuperator->RotationSpeed->getVal());   
       Serial.print("IN  temp:   ");Serial.println(LCDoutput.inTemp);
       Serial.print("OUT temp:   ");Serial.println(LCDoutput.outTemp);
@@ -284,7 +369,9 @@ void loop() {
       }else {
         Serial.print("WIFI RSSI:  ");Serial.print(WiFi.RSSI());Serial.println("dB");
       }
+      poll_gy21p();
       Serial.println("---------------------------");
+      
     }
     
     CurrentTime = millis();
@@ -298,12 +385,9 @@ void loop() {
 
       if (tempSpeed != recuperator->RotationSpeed->getVal()){
         
-        //on_off_enc(false);
         Serial.println("Save and set new speed");
         recuperator->RotationSpeed->setVal(tempSpeed);
         recuperator->setSpeed();
-
-        //on_off_enc(true);
       }
     }
 
