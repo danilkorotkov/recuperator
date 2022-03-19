@@ -8,6 +8,8 @@ PCF8583 as a rotation counter
 KY-040 encoder
 
 19 feb 2022 added GY-21P sensor
+
+
 13 mar 2022 added Eve app log
 
 Frankenstein foto %)
