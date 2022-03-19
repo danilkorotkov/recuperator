@@ -68,6 +68,8 @@ DigooData gy21p;
 Adafruit_BMP280 bme; // I2C
 Adafruit_Si7021 sensor = Adafruit_Si7021();
 
+String level = "DISCONNECTED"; 
+
 WordStruct LCDoutput;
 
 void IRAM_ATTR isrENC() {
@@ -233,24 +235,28 @@ void drawStatus() {
     if (WiFi.status() == WL_CONNECTED) {
       long rssi = WiFi.RSSI();
       if (rssi >= -55) {
+        level = "EXCELLENT";
         display.drawRect(0,62,4,1);
         display.drawRect(5,61,4,2);
         display.fillRect(10,59,4,4);
         display.fillRect(15,57,4,6);
         display.fillRect(20,55,4,8);
       }else if (rssi < -55 & rssi > -65) {
+        level = "GOOD";
         display.drawRect(0,62,4,1);
         display.drawRect(5,61,4,2);
         display.fillRect(10,59,4,4);
         display.fillRect(15,57,4,6);
         display.drawRect(20,55,4,8);
       }else if (rssi < -65 & rssi > -75) {
+        level = "LOW";
         display.drawRect(0,62,4,1);
         display.drawRect(5,61,4,2);
         display.fillRect(10,59,4,4);
         display.drawRect(15,57,4,6);
         display.drawRect(20,55,4,8);
       }else if (rssi < -75) {
+        level = "BAD";
         display.drawRect(0,62,4,1);
         display.drawRect(5,61,4,2);
         display.drawRect(10,59,4,4);
@@ -258,6 +264,7 @@ void drawStatus() {
         display.drawRect(20,55,4,8);
       }
     }else {
+      level = "DISCONNECTED";
       display.setTextAlignment(TEXT_ALIGN_LEFT);
       display.setFont(ArialMT_Plain_10);
       display.drawString(0, 45, "x");
@@ -372,7 +379,7 @@ void loop() {
         Serial.println("Couldn't get a wifi connection");
       }else {
         Serial.print("WIFI RSSI:  ");Serial.print(WiFi.RSSI());Serial.println("dB");
-        recuperator->WiFiLevel->setVal(float(WiFi.RSSI())); 
+        recuperator->WiFiLevel->setString(level.c_str());//(float(WiFi.RSSI())); 
       }
       poll_gy21p();
       Serial.println("---------------------------");

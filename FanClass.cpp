@@ -6,7 +6,9 @@ unsigned long HSCurrentTime     = 0;   // опрос
 CUSTOM_CHAR(IntCustomSensor,  00000001-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 21.5, -50, 100, false);
 CUSTOM_CHAR(OutCustomSensor,  00000002-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 21.5, -50, 100, false);
 CUSTOM_CHAR(RotCounterSensor, 00000003-0001-0001-0001-46637266EA00, PR+EV, UINT32, 0, 0, 6000, false);
-CUSTOM_CHAR(WiFiLevelSensor,  00000004-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 0, -100, 0, false);
+//CUSTOM_CHAR(WiFiLevelSensor,  00000004-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 0, -100, 0, false);
+
+CUSTOM_CHAR_STRING(WiFiLevelSensor,  00000004-0001-0001-0001-46637266EA00, PR+EV, "");
    
 RECUP::RECUP() : Service::Fan(){
 
@@ -21,7 +23,7 @@ RECUP::RECUP() : Service::Fan(){
     IntTemp             = new Characteristic::IntCustomSensor(21.5);
     OutTemp             = new Characteristic::OutCustomSensor(21.5);
     RotCnt              = new Characteristic::RotCounterSensor(0);
-    WiFiLevel           = new Characteristic::WiFiLevelSensor(0);
+    WiFiLevel           = new Characteristic::WiFiLevelSensor();
 
     this->pwmPin        = new LedPin(SpeedPin, 50, 25000);
 
