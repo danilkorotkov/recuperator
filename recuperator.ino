@@ -81,17 +81,17 @@ void IRAM_ATTR isrROT() {
 
 void poll_gy21p(){
   float bmeTemp   = bme.readTemperature();
-  float bmePress  = bme.readPressure()*0.00750062;
+  float bmePress  = bme.readPressure();//*0.00750062;
   float SiHum     = sensor.readHumidity();
   float SiTemp    = sensor.readTemperature();
   
   Serial.print("Temp bme:   ");Serial.print(bmeTemp);Serial.println("°C\t");
-  Serial.print("Press bme:  ");Serial.print(bmePress);Serial.println("mmHg\t");
+  Serial.print("Press bme:  ");Serial.print(bmePress*0.00750062);Serial.println("mmHg\t");
   Serial.print("Humidity:   ");Serial.print(SiHum, 2);Serial.println("%");
   Serial.print("Temp Si:    ");Serial.print(SiTemp, 2);Serial.println("°C\t");
 
   if (bmePress != NAN){
-    gy21p.pressure = bmePress;
+    gy21p.pressure = bmePress/100;//gPa for EVE
   }
 
   if (bmeTemp != NAN && SiTemp != NAN){
@@ -175,7 +175,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("1.6"); 
+      new Characteristic::FirmwareRevision("2.1"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -231,7 +231,7 @@ void drawStatus() {
 
 
     if (WiFi.status() == WL_CONNECTED) {
-      long rssi = WiFi.RSSI(); 
+      long rssi = WiFi.RSSI();
       if (rssi >= -55) {
         display.drawRect(0,62,4,1);
         display.drawRect(5,61,4,2);
@@ -335,12 +335,14 @@ void loop() {
       insensors.requestTemperatures();
       if(temperatureC != DEVICE_DISCONNECTED_C) {
         LCDoutput.inTemp = String(temperatureC, 1) + "ºC";
+        recuperator->IntTemp->setVal(temperatureC);
       }
   
       temperatureC = outsensors.getTempCByIndex(0);
       outsensors.requestTemperatures(); 
-      if(temperatureC != DEVICE_DISCONNECTED_C) {
+      if(temperatureC != DEVICE_DISCONNECTED_C) {        
         LCDoutput.outTemp = String(temperatureC, 1) + "ºC";
+        recuperator->OutTemp->setVal(temperatureC);
       }   
   
       TempTime = millis();
@@ -351,6 +353,8 @@ void loop() {
       counter.setCount(0);
 
       uint32_t cntSpeed = 15000*RotCnt/(millis() - RotTime);
+      recuperator->RotCnt->setVal(cntSpeed);
+      
       RotCnt=0;
       RotTime = millis();
       //LCDoutput.Speed = String(rotSpeed);
@@ -368,6 +372,7 @@ void loop() {
         Serial.println("Couldn't get a wifi connection");
       }else {
         Serial.print("WIFI RSSI:  ");Serial.print(WiFi.RSSI());Serial.println("dB");
+        recuperator->WiFiLevel->setVal(float(WiFi.RSSI())); 
       }
       poll_gy21p();
       Serial.println("---------------------------");

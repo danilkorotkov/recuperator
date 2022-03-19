@@ -9,24 +9,22 @@ struct DigooData{
 };
 CUSTOM_CHAR(Pressure,  E863F10F-079E-48FF-8F27-9C2605A29F52, PR+EV, FLOAT, 760, 600, 1200, true);
 
-
 struct THP : Service::TemperatureSensor {         // First we create a derived class from the HomeSpan 
   
   SpanCharacteristic *CurrentTemperature;              // here we create a generic pointer to a SpanCharacteristic 
   SpanCharacteristic *StatusActive;
   DigooData*          Data;
-  SpanCharacteristic  *AirPressure;
-    
+  SpanCharacteristic  *AirPressure;    
     
   THP(DigooData* Data) : Service::TemperatureSensor(){
  
     LOG1("Constructing digoo…\n");
     this->Data = Data;
-    CurrentTemperature=new Characteristic::CurrentTemperature(25);
+    CurrentTemperature = new Characteristic::CurrentTemperature(25);
     CurrentTemperature->setRange(-50, 100, 0.1);
-    StatusActive=new Characteristic::StatusActive(true);
-    AirPressure = new Characteristic::Pressure(760);
-      
+    StatusActive       = new Characteristic::StatusActive(true);
+    AirPressure        = new Characteristic::Pressure(760);
+
     LOG1(this->Data->humidity);         
     LOG1("Constructing Digoo successful!\n");
 
@@ -47,7 +45,6 @@ struct THP : Service::TemperatureSensor {         // First we create a derived c
       Data->isNew[0] = false;
       AirPressure->setVal(Data->pressure);
       
-      //if (CurrentTemperature->getVal() != Data->temperature) {CurrentTemperature->setVal(Data->temperature);LOG1("sensor T update\n");}
       CurrentTemperature->setVal(Data->temperature);
       
       if ( !(StatusActive -> getVal()) ) {StatusActive->setVal(true);}

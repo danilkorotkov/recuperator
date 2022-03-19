@@ -46,13 +46,15 @@ struct RECUP : Service::Fan {         // First we create a derived class from th
   SpanCharacteristic *CurrentFanState;
   SpanCharacteristic *TargetFanState;
   LedPin             *pwmPin;
+  SpanCharacteristic  *IntTemp;
+  SpanCharacteristic  *OutTemp;
+  SpanCharacteristic  *RotCnt;
+  SpanCharacteristic  *WiFiLevel;
      
   RECUP();
   boolean update();                                   
   void loop();
   void PollCurrentState();
-  void inc();
-  void dec();
   void setSpeed();
   void OnOff();
   void setFanState();
