@@ -77,6 +77,7 @@ boolean RECUP::update(){
 
   if (RotationDirection->updated() && TargetFanState->getVal() == tMANUAL){
     RotationDirection->setVal(RotationDirection->getNewVal());
+    lcdStatus();
     setSpeed();
   } else {
     RotationDirection->setVal(RotationDirection->getVal());
