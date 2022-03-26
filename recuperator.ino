@@ -176,8 +176,8 @@ void HomeKit(){
       new Characteristic::Name("Recuperator"); 
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
-      new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("2.1"); 
+      new Characteristic::Model("final"); 
+      new Characteristic::FirmwareRevision("2.2"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      

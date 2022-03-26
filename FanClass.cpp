@@ -1,12 +1,13 @@
 #include "FanClass.h"
 float pwmData;
 unsigned long HSCurrentTime     = 0;   // опрос
+uint32_t DUTY_CYCLE = 40000;
 ////////////////////////////
 
 CUSTOM_CHAR(IntCustomSensor,  00000001-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 21.5, -50, 100, false);
 CUSTOM_CHAR(OutCustomSensor,  00000002-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 21.5, -50, 100, false);
 CUSTOM_CHAR(RotCounterSensor, 00000003-0001-0001-0001-46637266EA00, PR+EV, UINT32, 0, 0, 6000, false);
-//CUSTOM_CHAR(WiFiLevelSensor,  00000004-0001-0001-0001-46637266EA00, PR+EV, FLOAT, 0, -100, 0, false);
+CUSTOM_CHAR(DutyCycleMmin,    00000005-0001-0001-0001-46637266EA00, PW+PR+EV, UINT32, 40, 30, 100, false);
 
 CUSTOM_CHAR_STRING(WiFiLevelSensor,  00000004-0001-0001-0001-46637266EA00, PR+EV, "");
    
@@ -24,6 +25,7 @@ RECUP::RECUP() : Service::Fan(){
     OutTemp             = new Characteristic::OutCustomSensor(21.5);
     RotCnt              = new Characteristic::RotCounterSensor(0);
     WiFiLevel           = new Characteristic::WiFiLevelSensor();
+    DutyCycle           = new Characteristic::DutyCycleMmin(40, true);
 
     this->pwmPin        = new LedPin(SpeedPin, 50, 25000);
 
@@ -34,12 +36,16 @@ RECUP::RECUP() : Service::Fan(){
     OutTemp   ->setDescription("Outside temperature");
     RotCnt    ->setDescription("Rotation speed");
     WiFiLevel ->setDescription("WiFi level");
+    DutyCycle ->setDescription("Min Duty Cycle");
     
-    IntTemp->setUnit("celsius");
-    OutTemp->setUnit("celsius");
+    DutyCycle ->setRange(40,100,5);
+    
+    IntTemp   ->setUnit("celsius");
+    OutTemp   ->setUnit("celsius");
+    DutyCycle ->setUnit("seconds");
       
 //--------------
-
+    DUTY_CYCLE = 1000*DutyCycle->getVal();
     if (TargetFanState->getVal() != tMANUAL){
       RotationDirection->setVal(OUTTAKE);
     }
@@ -84,7 +90,10 @@ boolean RECUP::update(){
     LOG1("Changing direction is not allowed in AUTO mode\n");
   }
 
-
+  if (DutyCycle->updated()){
+    DutyCycle->setVal(DutyCycle->getNewVal());
+    DUTY_CYCLE = 1000*DutyCycle->getVal();
+  }
     return(true);                                   
   
 } // update
