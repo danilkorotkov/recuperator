@@ -18,7 +18,7 @@ Encoder enc1(CLK, DT, SW);  // encoder + button */
 //#define EB_FAST 50 
 #include "EncButton.h"
 EncButton<EB_TICK, DT, CLK, SW> enc1;  // энкодер с кнопкой <A, B, KEY>
-TaskHandle_t h_encloop, h_HK_poll;
+TaskHandle_t h_encloop, h_HK_poll, h_gy21pTask;
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -38,8 +38,9 @@ DallasTemperature outsensors(&outoneWire);
 // Initialize the OLED display using Wire library
 SSD1306  display(0x3c, SDA, SCL);
 
-unsigned long CurrentTime  = 0;   // обновление эрана
-unsigned long LCDTimeout   = 20/1000; 
+unsigned long CurrentTime  = 0;   // обновление экрана
+unsigned long LCDTimeout   = 1/1000;//25/1000;
+bool          updated      = true;
 
 unsigned long RotTimeout   = 5000;   // обновление чтения оборотов
 unsigned long RotTime      = 0;   
@@ -47,10 +48,10 @@ unsigned long RotTime      = 0;
 unsigned long TempTimeout  = 1500;   // чтение термодатчков
 unsigned long TempTime     = 0;   // 
 
-static volatile float inc_dec=0; // чтение ожидание окончания вращения энкодера
+static volatile float         inc_dec=0; // чтение ожидание окончания вращения энкодера
 static volatile unsigned long inc_dec_time=0;
-unsigned long inc_dec_timeout=500;
-static volatile uint32_t RotCnt=0;
+unsigned long                 inc_dec_timeout=50;
+static volatile uint32_t      RotCnt=0;
 
 #include "PCF8583.h"
 // declare an instance of the library for IC at address 0xA0
@@ -87,34 +88,43 @@ void poll_gy21p(){
   float SiHum     = sensor.readHumidity();
   float SiTemp    = sensor.readTemperature();
   
+  WEBLOG("Temp bme: %.1f; Temp Si: %.1f; Press bme: %.1f; Humidity: %.1f; ",
+          bmeTemp,         
+          SiTemp,
+          bmePress*0.00750062,
+          SiHum);
+/*  
   Serial.print("Temp bme:   ");Serial.print(bmeTemp);Serial.println("°C\t");
   Serial.print("Press bme:  ");Serial.print(bmePress*0.00750062);Serial.println("mmHg\t");
   Serial.print("Humidity:   ");Serial.print(SiHum, 2);Serial.println("%");
   Serial.print("Temp Si:    ");Serial.print(SiTemp, 2);Serial.println("°C\t");
-
-  if (bmePress != NAN){
+*/
+  if (!isnan(bmePress)){
     gy21p.pressure = bmePress/100;//gPa for EVE
   }
 
-  if (bmeTemp != NAN && SiTemp != NAN){
+  if (!isnan(bmeTemp) && !isnan(SiTemp)){
+    WEBLOG("gy21p case 1");
     gy21p.temperature = (bmeTemp + SiTemp)/2;
     gy21p.updated     = millis();
     gy21p.isNew[0]    = true;
   }
 
-  if (bmeTemp == NAN && SiTemp != NAN){
+  if (!isnan(bmeTemp) && isnan(SiTemp)){
+    WEBLOG("gy21p case 2");
     gy21p.temperature = bmeTemp;
     gy21p.updated     = millis();
     gy21p.isNew[0]    = true;
   }  
   
-  if (bmeTemp != NAN && SiTemp == NAN){
+  if (isnan(bmeTemp) && !isnan(SiTemp)){
+    WEBLOG("gy21p case 3");
     gy21p.temperature = SiTemp;
     gy21p.updated     = millis();
     gy21p.isNew[0]    = true;
   }
 
-  if (SiHum != NAN){
+  if (!isnan(SiHum)){
     gy21p.humidity    = SiHum;
     gy21p.updated     = millis();
     gy21p.isNew[1]    = true;
@@ -122,14 +132,8 @@ void poll_gy21p(){
   
 }
 
-void encloop(void * pvParameters){
-
-  attachInterrupt(CLK, isrENC, CHANGE);    
-  attachInterrupt(DT,  isrENC, CHANGE);   
-  attachInterrupt(SW,  isrENC, CHANGE);
-
-  for (;;){
-    if (enc1.tick()) {
+void tickRoll(){
+  if (enc1.tick()) {
     
       if (enc1.left()) {
         inc_dec--;
@@ -141,13 +145,33 @@ void encloop(void * pvParameters){
 
       if (enc1.click()){
          recuperator->OnOff();
+         updated = true;
       }//click
 
       if (enc1.held()) {
         recuperator->TargetFanState->setVal(!recuperator->TargetFanState->getVal());
+        updated = true;
       }//held
       enc1.resetState();
     } //tick  
+}
+
+void gy21pTask(void * pvParameters){
+  for (;;){
+    poll_gy21p();
+    vTaskDelay( 60000 / portTICK_PERIOD_MS );
+  }   //loop
+}
+
+void encloop(void * pvParameters){
+
+  attachInterrupt(CLK, isrENC, CHANGE);    
+  attachInterrupt(DT,  isrENC, CHANGE);   
+  attachInterrupt(SW,  isrENC, CHANGE);
+
+  for (;;){
+    tickRoll();
+    vTaskDelay( 50 / portTICK_PERIOD_MS );
   }   //loop
 }     //task
 
@@ -155,6 +179,7 @@ void HK_poll(void * pvParameters){
 
   for (;;){
     homeSpan.poll();
+    //vTaskDelay( 500 / portTICK_PERIOD_MS );
   }   //loop
 }     //task
 
@@ -165,8 +190,9 @@ void HomeKit(){
   homeSpan.setStatusPin(2);
   homeSpan.setLogLevel(1);
 
-  homeSpan.setSketchVersion("2.1.1");
+  homeSpan.setSketchVersion("2.2.1");
   homeSpan.enableOTA();
+  homeSpan.enableWebLog(50,"pool.ntp.org","UTC-3:00","log");
   
   homeSpan.begin(Category::Fans,"Recuperator");
   
@@ -177,7 +203,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("final"); 
-      new Characteristic::FirmwareRevision("2.2"); 
+      new Characteristic::FirmwareRevision("2.4"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -192,7 +218,7 @@ void HomeKit(){
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("beta"); 
-      new Characteristic::FirmwareRevision("0.1"); 
+      new Characteristic::FirmwareRevision("0.3"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -310,21 +336,30 @@ void setup() {
   xTaskCreatePinnedToCore(
                     HK_poll,    /* Task function. */
                     "HK_poll",  /* name of task. */
-                    10000,       /* Stack size of task */
+                    20000,       /* Stack size of task */
                     NULL,        /* parameter of the task */
                     1,           /* priority of the task */
                     &h_HK_poll, /* Task handle to keep track of created task */
                     0);          /* pin task to core 0 */  
-  
   delay(1000);
   
   bme.begin(BMP280_ADDRESS_ALT);
   sensor.begin();
-  poll_gy21p();
+  xTaskCreatePinnedToCore(
+                    gy21pTask,     /* Task function. */
+                    "gy21pTask",   /* name of task. */
+                    10000,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &h_gy21pTask, /* Task handle to keep track of created task */
+                    1);          /* pin task to core 1 */  
+
+  //delay(1000);
+  //poll_gy21p();
   
   // configure PCF8586 to event counter mode and reset counts
   pinMode(ROTCNT,INPUT);
-  attachInterrupt(ROTCNT, isrROT, CHANGE);
+  attachInterrupt(ROTCNT, isrROT, RISING);
   counter.setMode(MODE_EVENT_COUNTER);
   counter.setCount(0);
   CurrentTime = millis();
@@ -335,37 +370,45 @@ void loop() {
   
   //homeSpan.poll();
   
-  if ( (millis() - CurrentTime) > LCDTimeout ) {
-
+  //if ( (millis() - CurrentTime) > LCDTimeout ) {
+  if (updated) {
+    drawStatus();
+    updated = false;
+  }
+  
     if ( (millis() - TempTime) > TempTimeout ) {
       float temperatureC = insensors.getTempCByIndex(0);
       insensors.requestTemperatures();
       if(temperatureC != DEVICE_DISCONNECTED_C) {
         LCDoutput.inTemp = String(temperatureC, 1) + "ºC";
-        recuperator->IntTemp->setVal(temperatureC);
+        if (temperatureC < 100 && temperatureC > -50){recuperator->IntTemp->setVal(temperatureC);}
+        updated = true;
       }
   
       temperatureC = outsensors.getTempCByIndex(0);
       outsensors.requestTemperatures(); 
       if(temperatureC != DEVICE_DISCONNECTED_C) {        
         LCDoutput.outTemp = String(temperatureC, 1) + "ºC";
-        recuperator->OutTemp->setVal(temperatureC);
+        if (temperatureC < 100 && temperatureC > -50){recuperator->OutTemp->setVal(temperatureC);}
+        updated = true;
       }   
   
       TempTime = millis();
     }
     
     if ( (millis() - RotTime) > RotTimeout ) {
-      uint32_t rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
-      counter.setCount(0);
+      //uint32_t rotSpeed = 30000*counter.getCount()/(millis() - RotTime);
+      //counter.setCount(0);
 
-      uint32_t cntSpeed = 15000*RotCnt/(millis() - RotTime);
-      recuperator->RotCnt->setVal(cntSpeed);
+      uint32_t cntSpeed = 30000*RotCnt/(millis() - RotTime);
+      if (RotCnt <= 6000){recuperator->RotCnt->setVal(cntSpeed);}
       
+      //rotSpeed=0;
       RotCnt=0;
       RotTime = millis();
+      updated = true;
       //LCDoutput.Speed = String(rotSpeed);
-      Serial.println("---------------------------");
+/*      Serial.println("---------------------------");
       Serial.print("Aver speed: ");Serial.println(rotSpeed);
       Serial.print("CNT  speed: ");Serial.println(cntSpeed);
       Serial.print("Targ speed: ");Serial.println(recuperator->RotationSpeed->getVal());   
@@ -374,27 +417,33 @@ void loop() {
       Serial.print("Uptime, s:  ");Serial.println(millis()/1000);
       Serial.print("State:      ");Serial.println(LCDoutput.Status);
       Serial.print("Mode:       ");Serial.println(recuperator->TargetFanState->getVal() == tAUTO? "Auto":"Manual");
+*/
+      WEBLOG("Aver speed: %d; Targ speed: %d; IN  temp: %s; OUT temp: %s; State: %s; Mode: %s; wifi: %s", 
+        recuperator->RotCnt->getVal(),
+        recuperator->RotationSpeed->getVal(),
+        LCDoutput.inTemp, //recuperator->IntTemp->getVal(),
+        LCDoutput.outTemp,//recuperator->OutTemp->getVal(),
+        recuperator->Active->getVal() == OFF?"OFF":recuperator->RotationDirection->getVal()==OUTTAKE?"OUTTAKE":"INTAKE", //LCDoutput.Status,//
+        recuperator->TargetFanState->getVal() == tAUTO? "Auto":"Manual",
+        level);
             
-      if (WiFi.status() != WL_CONNECTED) { 
-        Serial.println("Couldn't get a wifi connection");
-      }else {
-        Serial.print("WIFI RSSI:  ");Serial.print(WiFi.RSSI());Serial.println("dB");
-        recuperator->WiFiLevel->setString(level.c_str());//(float(WiFi.RSSI())); 
-      }
-      poll_gy21p();
-      Serial.println("---------------------------");
+
+      recuperator->WiFiLevel->setString(level.c_str());//(float(WiFi.RSSI())); 
+      //poll_gy21p();
+      //Serial.println("---------------------------");
       
     }
     
     CurrentTime = millis();
 
-    if (inc_dec != 0 & (millis() - inc_dec_time) > inc_dec_timeout){
+    if (inc_dec != 0 && (millis() - inc_dec_time) > inc_dec_timeout){
       float tempSpeed = recuperator->RotationSpeed->getVal() + inc_dec * 100;
       inc_dec = 0;
+      updated = true;
       
       if (tempSpeed > 5300) {tempSpeed=5300;}
       else if (tempSpeed < 1000)  {tempSpeed=1000;}
-
+      
       if (tempSpeed != recuperator->RotationSpeed->getVal()){
         
         Serial.println("Save and set new speed");
@@ -402,9 +451,5 @@ void loop() {
         recuperator->setSpeed();
       }
     }
-
-
-    drawStatus();
-  }
   //encloop();
 }
